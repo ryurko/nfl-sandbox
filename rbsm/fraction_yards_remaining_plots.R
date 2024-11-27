@@ -83,3 +83,60 @@ rb_pbp |>
         plot.title = element_text(size = 20),
         plot.subtitle = element_text(size = 12))
 
+# ECDF is probably what we really want here...
+rb_pbp |>
+  mutate(is_saquon = rusher_player_id == "00-0034844",
+         perc_gained = pmin(pmax(0, perc_gained), 1)) |>
+  ggplot(aes(x = perc_gained, color = is_saquon)) +
+  stat_ecdf(linewidth = 1.5) +
+  annotate("text", x = .1, y = .9, label = "Everyone else", color = "gray",
+           size = 10) +
+  annotate("text", x = .5, y = .75, label = "Saquon", color = "#004C54",
+           size = 10) +
+  scale_color_manual(values = c("gray", "#004C54"),
+                    labels = c("Everyone else", "Saquon")) +
+  scale_y_continuous(breaks = seq(0, 1, by = 0.1)) +
+  labs(x = "Fraction of yards to endzone gained on carry",
+       y = "Distribution percentiles",
+       title = "Saquon hits more explosive plays than other NFL RBs in 2024 season",
+       subtitle = "ECDF for fraction of yards to endzone gained on carries, split between Saquon's carries (green) versus all other NFL RBs (gray)",
+       caption = "Data courtesy of nflreadr") +
+  theme_light() +
+  theme(legend.position = "none",
+        plot.title = element_text(size = 20),
+        plot.subtitle = element_text(size = 12))
+
+# So what does the passing version look like? -----------------------------
+
+pass_pbp <- nfl_pbp |>
+  filter(!is.na(epa), play_type == "pass", penalty == 0) |>
+  dplyr::select(game_id, play_id, week, qtr, defteam, yardline_100, ydstogo,
+                yards_gained, epa, wpa, touchdown) |>
+  mutate(perc_gained = yards_gained / yardline_100)
+
+rb_pbp |>
+  filter(rusher_player_id == "00-0034844") |>
+  mutate(play_type = "saquon_runs") |>
+  bind_rows(mutate(pass_pbp, play_type = "nfl_pass")) |>
+  mutate(perc_gained = pmin(pmax(0, perc_gained), 1)) |>
+  ggplot(aes(x = perc_gained, color = play_type)) +
+  stat_ecdf(linewidth = 1.5) +
+  annotate("text", x = .35, y = 1, label = "NFL passing plays",
+           color = "darkorange", size = 10) +
+  annotate("text", x = .75, y = .8, label = "Saquon", color = "#004C54",
+           size = 10) +
+  scale_color_manual(values = c("darkorange", "#004C54"),
+                     labels = c("NFL passing plays", "Saquon")) +
+  scale_y_continuous(breaks = seq(0, 1, by = 0.1)) +
+  labs(x = "Fraction of yards to endzone gained on carry",
+       y = "Distribution percentiles",
+       title = "Is Saquon more explosive than passing plays?",
+       subtitle = "ECDF for fraction of yards to endzone gained on Saquon's carries (green) versus NFL passing plays (orange)",
+       caption = "Data courtesy of nflreadr") +
+  theme_light() +
+  theme(legend.position = "none",
+        plot.title = element_text(size = 20),
+        plot.subtitle = element_text(size = 12))
+
+
+
